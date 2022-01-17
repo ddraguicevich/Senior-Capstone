@@ -45,6 +45,7 @@ void Oscillator::update(void)
 {
     auto now = std::chrono::system_clock::now();
     auto delta = now - this->last_time;
+    this->last_time = now;
     int temp;
     this->theta = modf(delta / this->freq + this->theta, &temp);
     switch(this->wave)
