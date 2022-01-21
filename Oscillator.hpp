@@ -3,6 +3,11 @@
 
 #include <ctime>
 
+#define WAVE_SIN 's'
+#define WAVE_SQ 'q'
+#define WAVE_TRI 't'
+#define WAVE_SAW 'w'
+
 class Oscillator
 {
     private:

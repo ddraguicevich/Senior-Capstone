@@ -50,16 +50,16 @@ void Oscillator::update(void)
     this->theta = modf(delta / this->freq + this->theta, &temp);
     switch(this->wave)
     {
-        case s:
+        case WAVE_SIN:
             this->amplitude = sin(2 * M_PI * this->theta);
             break;
-        case q:
+        case WAVE_SQ:
             this->amplitude = this->theta > 0.5 ? 1.0 : -1.0;
             break;
-        case t:
+        case WAVE_TRI:
             this->amplitude = this->theta > 0.5 ? 4 * this->theta - 3 : -4 * this->theta + 1;
             break;
-        case w:
+        case WAVE_SAW:
             this->amplitude = 2 * this->theta - 1;
             break;
     }
