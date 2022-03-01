@@ -8,8 +8,8 @@
 // GUItool: begin automatically generated code
 AudioSynthWaveform       oscillator1;      
 AudioOutputI2S           dac;           
-AudioConnection          patchCord1(oscillator1, 0, i2s1, 0);
-AudioConnection          patchCord2(oscillator1, 0, i2s1, 1);
+AudioConnection          patchCord1(oscillator1, 0, dac, 0);
+AudioConnection          patchCord2(oscillator1, 0, dac, 1);
 // GUItool: end automatically generated code
 
 int main(void)
