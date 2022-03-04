@@ -21,16 +21,19 @@ AudioConnection          patchCord2(oscillator1, 0, dac, 1);
 // GUItool: end automatically generated code
 
 #define VOLUME_PIN 40
-double volume = 0.5;
+double volume = 0.9;
 double freq = 440;
 
 void setup()
 {
-    oscillator1.begin(volume, freq, WAVEFORM_SINE);
+    AudioMemory(10);
+    Serial.begin(9600);
+    oscillator1.begin(WAVEFORM_SINE);
 }
 
 void loop()
 {
-    volume = analogRead(VOLUME_PIN) / 1024.0;
+    volume = analogRead(VOLUME_PIN) / 1023.0;
+    oscillator1.frequency(freq);
     oscillator1.amplitude(volume);
 }
