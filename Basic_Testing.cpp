@@ -18,22 +18,24 @@ AudioSynthWaveform       oscillator1;
 AudioOutputI2S           dac;
 AudioConnection          patchCord1(oscillator1, 0, dac, 0);
 AudioConnection          patchCord2(oscillator1, 0, dac, 1);
+AudioControlSGTL5000     sgt;
 // GUItool: end automatically generated code
 
 #define VOLUME_PIN 40
-double volume = 0.9;
 double freq = 440;
 
 void setup()
 {
     AudioMemory(10);
     Serial.begin(9600);
+    sgt.enable();
+    sgt.volume(0.25);
     oscillator1.begin(WAVEFORM_SINE);
 }
 
 void loop()
 {
-    volume = analogRead(VOLUME_PIN) / 1023.0;
+    freq = 20 + (analogRead(VOLUME_PIN) / 1023.0) * 2000;
     oscillator1.frequency(freq);
-    oscillator1.amplitude(volume);
+    oscillator1.amplitude(1.0);
 }
