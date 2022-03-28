@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <vector>
 #include <Bounce.h>
+#include <chrono>
 
 // GUItool: begin automatically generated code
 AudioSynthWaveform       oscillator1;
@@ -93,6 +94,8 @@ double attack, decay, sustain, release;
 int type, note, velocity, channel, d1, d2;
 const double scale_factor = 9.0 / 1023.0; //Used for envelope scaling later
 const double envelope_max = 11800.0; //Max duration of envelope attack, decay, and release
+std::chrono::high_resolution_clock::time_point timestamp;
+std::chrono::duration<double, std::milli> time_diff;
 
 //Identify Potentiometer Pins for later
 unsigned int potentiometers[]
@@ -260,7 +263,7 @@ void loop()
         play_note(note);
       } else
       {
-        stop_note(note, release);
+        stop_note(note);
       }
     }
   }
@@ -273,6 +276,10 @@ void play_note(const unsigned int note)
   unsigned int i = 0;
   while (i < 6)
   {
+    if (!envelopes[i]->isActive())
+    {
+      available[i] = true;
+    }
     if (available[i])
     {
       for (unsigned int j = 3 * i; j < 3 * i + 3; ++j)
@@ -289,9 +296,8 @@ void play_note(const unsigned int note)
 }
 
 //Stop playing a note. Corresponds to play_note() above
-void stop_note(const unsigned int note, const double release)
+void stop_note(const unsigned int note)
 {
   unsigned int envelope = playing[note];
   envelopes[envelope]->noteOff();
-  available[envelope] = true;
 }
