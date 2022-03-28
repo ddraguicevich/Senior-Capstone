@@ -2,7 +2,7 @@
     Basic_Testing
     Diego Draguicevich
     The purpose of this file is to implement SASS's minimum viable product
-    of 6-note polyphony, MIDI input, 
+    of 6-note polyphony, MIDI input, envelope control, and waveform control
 */
 
 #include <Audio.h>
