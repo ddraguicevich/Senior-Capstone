@@ -1,9 +1,8 @@
 /*
     Basic_Testing
     Diego Draguicevich
-    The purpose of this file is to test the basic functionality
-    of the Teensy 4.1 and our chosen DAC by outputting a steady
-    sine wave which has user-defined volume via a potentiometer
+    The purpose of this file is to implement SASS's minimum viable product
+    of 6-note polyphony, MIDI input, 
 */
 
 #include <Audio.h>
@@ -49,6 +48,7 @@ AudioMixer4              mix5;
 AudioMixer4              mix6;
 AudioMixer4              mix7;
 AudioMixer4              mix8;
+AudioMixer4              mix9;
 AudioAmplifier           amp1;
 AudioOutputPT8211        dac;
 AudioConnection          patchCord1(oscillator1, 0, mix1, 0);
@@ -81,28 +81,34 @@ AudioConnection          patchCord27(envelope3, 0, mix7, 2);
 AudioConnection          patchCord28(envelope4, 0, mix8, 0);
 AudioConnection          patchCord29(envelope5, 0, mix8, 1);
 AudioConnection          patchCord30(envelope6, 0, mix8, 2);
-AudioConnection          patchCord31(mix7, 0, mix8, 3);
-AudioConnection          patchCord32(mix8, 0, amp1, 0);
-AudioConnection          patchCord33(amp1, 0, dac, 0);
-AudioConnection          patchCord34(amp1, 0, dac, 1);
+AudioConnection          patchCord31(mix7, 0, mix9, 0);
+AudioConnection          patchCord32(mix8, 0, mix9, 1);
+AudioConnection          patchcord33(mix9, 0, amp1, 0);
+AudioConnection          patchCord34(amp1, 0, dac, 0);
+AudioConnection          patchCord35(amp1, 0, dac, 1);
 // GUItool: end automatically generated code
 
 double attack, decay, sustain, release;
 bool note_on = false;
 bool new_note = false;
 int type, note, velocity, channel, d1, d2;
+const double scale_factor = 9.0 / 1023.0; //Used for envelope scaling later
+const double envelope_max = 11800.0; //Max duration of envelope attack, decay, and release
 
+//Identify Potentiometer Pins for later
 unsigned int potentiometers[]
 {
   39, 40
 };
 
+//Used for buttons - not in final MIDI code
 unsigned int note_pins[]
 {
   27, 28, 29, 30
 };
 
-//Setup for actual note frequencies since MIDI only gives 0-255
+//Setup for actual note frequencies since MIDI only gives 0-255 int
+//but we need frequency as a double
 double notes[]
 {
   32.7, 34.65, 36.71, 38.89, 41.2, 43.65, 46.25, 49, 51.91, 55, 58.27, 61.74,
@@ -113,11 +119,21 @@ double notes[]
   1046.5, 1108.73, 1174.66, 1244.51, 1318.51, 1396.91, 1479.98, 1567.98, 1661.22, 1760, 1864.66, 1975.53
 };
 
-//Setting up for polyphony
+//Makes setting up mixers easier
+AudioMixer4 * mixers[8]
+{
+  &mix1, &mix2, &mix3, &mix4, &mix5, &mix6, &mix7, &mix8
+};
+
+//Setting up for polyphony by creating an array of pointers
+//to all the envelopes which we can then cycle through
 AudioEffectEnvelope * envelopes[6]
 {
   &envelope1, &envelope2, &envelope3, &envelope4, &envelope5, &envelope6
 };
+
+//Makes sorting out note frequency easier,
+//as well as polyphony
 AudioSynthWaveform * oscillators[18]
 {
   &oscillator1, &oscillator2, &oscillator3,
@@ -127,6 +143,8 @@ AudioSynthWaveform * oscillators[18]
   &oscillator13, &oscillator14, &oscillator15,
   &oscillator16, &oscillator17, &oscillator18
 };
+
+//For determining which envelope is available for polyphony
 bool available [6]
 {
   true, true, true, true, true, true
@@ -139,15 +157,27 @@ void stop_note(const unsigned int note);
 
 void setup()
 {
-  AudioMemory(18);
-  Serial.begin(9600);
+  AudioMemory(18); //Need to designate audio memory or nothing works
+  Serial.begin(9600); //For testing
   amp1.gain(1.0);
 
-  for (unsigned int i = 0; i < 6; ++i)
+  //Prevent clipping with mixers
+  for (unsigned int i = 0; i < 8; ++i)
+  {
+    mixers[i]->gain(0, 0.33);
+    mixers[i]->gain(1, 0.33);
+    mixers[i]->gain(2, 0.33);
+  }
+  mix9.gain(0, 0.5);
+  mix9.gain(1, 0.5);
+
+  //Initialize oscillators
+  for (unsigned int i = 0; i < 18; ++i)
   {
     oscillators[i]->begin(1.0, 440.0, WAVEFORM_TRIANGLE);
   }
-  
+
+  //Initialize buttons for testing
   for (unsigned int i = 0; i < sizeof(note_pins) / sizeof(int); ++i)
   {
     pinMode(note_pins[i], INPUT);
@@ -209,8 +239,8 @@ void loop()
     {
       if (!playing[note])
       {
-        attack = pow(analogRead(potentiometers[0]), 3) / pow(1023, 3) * 11800.0;
-        release = pow(analogRead(potentiometers[1]), 3) / pow(1023, 3) * 11800.0;
+        attack = (1 - log10(1 + analogRead(potentiometers[0]) * scale_factor)) * envelope_max;
+        release = (1 - log10(1 + analogRead(potentiometers[1]) * scale_factor)) * envelope_max;
         for (unsigned int i = 0; i < 6; ++i)
         {
           envelopes[i]->attack(attack);
@@ -225,10 +255,10 @@ void loop()
   }
 }
 
-//Implement polyphony via a circular array in a vector
+//Implement polyphony via parallel arrays
 void play_note(const unsigned int note)
 {
-  Serial.println(String("Playing note ") + note);
+//  Serial.println(String("Playing note ") + note); //For testing
   unsigned int i = 0;
   while (i < 6)
   {
@@ -246,6 +276,8 @@ void play_note(const unsigned int note)
     ++i;
   }
 }
+
+//Stop playing a note. Corresponds to play_note() above
 void stop_note(const unsigned int note)
 {
   unsigned int envelope = playing[note] - 1;
