@@ -89,8 +89,6 @@ AudioConnection          patchCord35(amp1, 0, dac, 1);
 // GUItool: end automatically generated code
 
 double attack, decay, sustain, release;
-bool note_on = false;
-bool new_note = false;
 int type, note, velocity, channel, d1, d2;
 const double scale_factor = 9.0 / 1023.0; //Used for envelope scaling later
 const double envelope_max = 11800.0; //Max duration of envelope attack, decay, and release
