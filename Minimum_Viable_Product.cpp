@@ -14,6 +14,7 @@
 #include <MIDI.h>
 #include <algorithm>
 #include <vector>
+#include <Bounce.h>
 
 // GUItool: begin automatically generated code
 AudioSynthWaveform       oscillator1;
@@ -105,6 +106,16 @@ unsigned int note_pins[]
   27, 28, 29, 30
 };
 
+//Debouncing buttons
+Bounce b1(27, 10);
+Bounce b2(28, 10);
+Bounce b3(29, 10);
+Bounce b4(30, 10);
+Bounce buttons[4]
+{
+  b1, b2, b3, b4
+};
+
 //Setup for actual note frequencies since MIDI only gives 0-255 int
 //but we need frequency as a double
 double notes[]
@@ -130,6 +141,9 @@ AudioEffectEnvelope * envelopes[6]
   &envelope1, &envelope2, &envelope3, &envelope4, &envelope5, &envelope6
 };
 
+//Determine which envelope plays which note
+unsigned int playing[72];
+
 //Makes sorting out note frequency easier,
 //as well as polyphony
 AudioSynthWaveform * oscillators[18]
@@ -147,7 +161,6 @@ bool available [6]
 {
   true, true, true, true, true, true
 };
-int playing [72];
 
 //Playing notes with polyphony
 void play_note(const unsigned int note);
@@ -233,10 +246,10 @@ void loop()
         note = 36;
         break;
     }
-    if (digitalRead(note_pins[i]))
+    if (buttons[i].update())
     {
-      if (!playing[note])
-      {
+      if (buttons[i].risingEdge())
+      { 
         attack = (1 - log10(1 + analogRead(potentiometers[0]) * scale_factor)) * envelope_max;
         release = (1 - log10(1 + analogRead(potentiometers[1]) * scale_factor)) * envelope_max;
         for (unsigned int i = 0; i < 6; ++i)
@@ -245,10 +258,10 @@ void loop()
           envelopes[i]->release(release);
         }
         play_note(note);
+      } else
+      {
+        stop_note(note, release);
       }
-    } else if (playing[note])
-    {
-      stop_note(note);
     }
   }
 }
@@ -266,9 +279,9 @@ void play_note(const unsigned int note)
       {
         oscillators[j]->frequency(notes[note]);
       }
-      playing[note] = i + 1;
       envelopes[i]->noteOn();
       available[i] = false;
+      playing[note] = i;
       break;
     }
     ++i;
@@ -276,10 +289,9 @@ void play_note(const unsigned int note)
 }
 
 //Stop playing a note. Corresponds to play_note() above
-void stop_note(const unsigned int note)
+void stop_note(const unsigned int note, const double release)
 {
-  unsigned int envelope = playing[note] - 1;
+  unsigned int envelope = playing[note];
   envelopes[envelope]->noteOff();
   available[envelope] = true;
-  playing[note] = 0;
 }
