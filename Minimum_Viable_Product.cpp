@@ -93,7 +93,7 @@ AudioConnection          patchCord35(amp1, 0, dac, 1);
 double attack, decay, sustain, release;
 int type, velocity, channel, d1, d2;
 int waveform;
-const double const1 = log10(4) - log10(3);            //Used for envelope equations. See README.md, section 3.2
+const double const1 = log10(4) - log10(3);            //Used for envelope equations. See README.md section 3.2
 const double const2 = log10(2) / const1;              //continued
 const double const3 = (log10(3) - log10(2)) / const1; //continued
 const double const4 = 11.7 / (11.8 * const3);         //continued
@@ -268,7 +268,7 @@ void play_note(byte channel, byte note, byte velocity)
 {
   //Serial.println(notes[note - note_diff]); //For testing
   //Serial.println(velocity, DEC); //For testing
-  //Update attack and release
+  //Update attack and release. See README.md section 3.2
   attack = analogRead(potentiometers[0]);
   Serial.println("Read attack raw value: ");
   Serial.println(attack);
