@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <vector>
 #include <Bounce.h>
-#include <chrono>
+#include <USBHost_t36.h>
 
 // GUItool: begin automatically generated code
 AudioSynthWaveform       oscillator1;
@@ -91,11 +91,14 @@ AudioConnection          patchCord35(amp1, 0, dac, 1);
 // GUItool: end automatically generated code
 
 double attack, decay, sustain, release;
-int type, note, velocity, channel, d1, d2;
-const double scale_factor = 9.0 / 1023.0; //Used for envelope scaling later
+int type, velocity, channel, d1, d2;
+int waveform;
+const double const1 = log10(4) - log10(3);            //Used for envelope equations. See README.md, section 3.2
+const double const2 = log10(2) / const1;              //continued
+const double const3 = (log10(3) - log10(2)) / const1; //continued
+const double const4 = 11.7 / (11.8 * const3);         //continued
+const double analog_range = 1023.0; //Max value for analog inputs
 const double envelope_max = 11800.0; //Max duration of envelope attack, decay, and release
-std::chrono::high_resolution_clock::time_point timestamp;
-std::chrono::duration<double, std::milli> time_diff;
 
 //Identify Potentiometer Pins for later
 unsigned int potentiometers[]
@@ -121,14 +124,20 @@ Bounce buttons[4]
 
 //Setup for actual note frequencies since MIDI only gives 0-255 int
 //but we need frequency as a double
+//Note - 24 gives C2 as lowest note since keyboard minimum is 36
+unsigned int note_diff = 12;
 double notes[]
 {
+  16.35, 17.23, 18.35, 19.45, 20.60, 21.83, 23.21, 24.50, 25.96, 27.50, 29.14, 30.87,
   32.7, 34.65, 36.71, 38.89, 41.2, 43.65, 46.25, 49, 51.91, 55, 58.27, 61.74,
   65.41, 69.3, 73.42, 77.78, 82.41, 87.31, 92.5, 98, 103.83, 110, 116.54, 123.47,
   130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185, 196, 207.65, 220, 233.08, 246.94,
   261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392, 415.3, 440, 466.16, 493.88,
   523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 783.99, 830.61, 880, 932.33, 987.77,
-  1046.5, 1108.73, 1174.66, 1244.51, 1318.51, 1396.91, 1479.98, 1567.98, 1661.22, 1760, 1864.66, 1975.53
+  1046.5, 1108.73, 1174.66, 1244.51, 1318.51, 1396.91, 1479.98, 1567.98, 1661.22, 1760, 1864.66, 1975.53,
+  2093.00, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83, 2959.96, 3135.96, 3322.44, 3520.00, 3729.31, 3951.07,
+  4186.01, 4434.92, 4698.64, 4978.03, 5274.04, 5587.65, 5919.91, 6271.93, 5544.88, 7040.00, 7458.62, 7902.13,
+  8372.02, 8869.84, 9397.27, 9956.06, 10548.08, 11175.30, 11839.82, 12543.86, 13289.75, 14080.00, 14917.24, 15804.26
 };
 
 //Makes setting up mixers easier
@@ -145,7 +154,7 @@ AudioEffectEnvelope * envelopes[6]
 };
 
 //Determine which envelope plays which note
-unsigned int playing[72];
+int playing[255];
 
 //Makes sorting out note frequency easier,
 //as well as polyphony
@@ -164,16 +173,41 @@ bool available [6]
 {
   true, true, true, true, true, true
 };
+//For which note each envelope is playing
+int notes_played[6];
+
+//Setup for the USB host
+USBHost usb;
+//No idea why these hubs are needed but removing them breaks it
+USBHub hub1(usb);
+USBHub hub2(usb);
+MIDIDevice midi1(usb);
 
 //Playing notes with polyphony
 void play_note(const unsigned int note);
 void stop_note(const unsigned int note);
 
+//MIDI Setup
+void myNoteOn(byte channel, byte note, byte velocity);
+void myNoteOff(byte channel, byte note, byte velocity);
+
 void setup()
 {
+    
+  // Wait 1.5 seconds before turning on USB Host.  If connected USB devices
+  // use too much power, Teensy at least completes USB enumeration, which
+  // makes isolating the power issue easier.
+  //delay(1500);
+  usb.begin();
+  
   AudioMemory(18); //Need to designate audio memory or nothing works
   Serial.begin(9600); //For testing
+  Serial.println("Began monitoring USB host port");
   amp1.gain(1.0);
+
+  //MIDI setup
+  midi1.setHandleNoteOn(play_note);
+  midi1.setHandleNoteOff(stop_note);
 
   //Prevent clipping with mixers
   for (unsigned int i = 0; i < 8; ++i)
@@ -200,95 +234,88 @@ void setup()
 
 void loop()
 {
-  //MIDI stuff, falls under TODO
-  //  if (usbMIDI.read())
-  //  {
-  //    byte type = usbMIDI.getType();
-  //    switch (type)
-  //    {
-  //      case midi::NoteOn:
-  //        note = usbMIDI.getData1();
-  //        velocity = usbMIDI.getData2();
-  //        channel = usbMIDI.getChannel();
-  //        if (velocity > 0)
-  //        {
-  //          Serial.println(String("Note On: ") + note + String(", velocity: ") + velocity);
-  //        } else
-  //        {
-  //          Serial.println(String("Note Off: ") + note + String(", velocity: ") + velocity);
-  //        }
-  //        break;
-  //      case midi::NoteOff:
-  //        note = usbMIDI.getData1();
-  //        velocity = usbMIDI.getData2();
-  //        channel = usbMIDI.getChannel();
-  //        Serial.println(String("Note Off: ") + note + String(", velocity: ") + velocity);
-  //        break;
-  //      default:
-  //        d1 = usbMIDI.getData1();
-  //        d2 = usbMIDI.getData2();
-  //        Serial.println(String("Got non-note data: ") + d1 + String(", ") + d2);
-  //        break;
-  //    }
-  //  }
+  usb.Task();
+  midi1.read();
 
   for (unsigned int i = 0; i < sizeof(note_pins) / sizeof(int); ++i)
   {
-    switch (note_pins[i])
-    {
-      case 27:
-        note = 29;
-        break;
-      case 28:
-        note = 31;
-        break;
-      case 29:
-        note = 33;
-        break;
-      case 30:
-        note = 36;
-        break;
-    }
     if (buttons[i].update())
     {
       if (buttons[i].risingEdge())
       { 
-        attack = (1 - log10(1 + analogRead(potentiometers[0]) * scale_factor)) * envelope_max;
-        release = (1 - log10(1 + analogRead(potentiometers[1]) * scale_factor)) * envelope_max;
-        for (unsigned int i = 0; i < 6; ++i)
+        switch (note_pins[i])
         {
-          envelopes[i]->attack(attack);
-          envelopes[i]->release(release);
+          case 27:
+            waveform = WAVEFORM_SINE;
+            break;
+          case 28:
+            waveform = WAVEFORM_SQUARE;
+            break;
+          case 29:
+            waveform = WAVEFORM_TRIANGLE;
+            break;
+          case 30:
+            waveform = WAVEFORM_SAWTOOTH;
+            break;
         }
-        play_note(note);
-      } else
-      {
-        stop_note(note);
       }
     }
   }
 }
 
 //Implement polyphony via parallel arrays
-void play_note(const unsigned int note)
+void play_note(byte channel, byte note, byte velocity)
 {
-//  Serial.println(String("Playing note ") + note); //For testing
+  //Serial.println(notes[note - note_diff]); //For testing
+  //Serial.println(velocity, DEC); //For testing
+  //Update attack and release
+  attack = analogRead(potentiometers[0]);
+  Serial.println("Read attack raw value: ");
+  Serial.println(attack);
+  if (attack > (1023.0 / 2.0))
+  {
+    attack = (const2 - (log10(1 + attack / analog_range) / const1)) * 100.0;
+  } else
+  {
+    attack = (1 - (log10(1 + attack / analog_range) / const1) * const4) * envelope_max;
+  }
+  release = analogRead(potentiometers[1]);
+  Serial.println("Read release raw value: ");
+  Serial.println(release);
+  if (release > (1023.0 / 2.0))
+  {
+    release = (const2 - (log10(1 + release / analog_range) / const1)) * 100.0;
+  } else
+  {
+    release = (1 - (log10(1 + release / analog_range) / const1) * const4) * envelope_max;
+  }
+  Serial.println("Calculated Attack (ms): ");
+  Serial.println(attack);
+  Serial.println("Calculated Release (ms): ");
+  Serial.println(release);
   unsigned int i = 0;
   while (i < 6)
   {
     if (!envelopes[i]->isActive())
     {
       available[i] = true;
+      notes_played[i] = 0;
     }
-    if (available[i])
+    if (available[i] || notes_played[i] == (note - note_diff))
     {
+      double v = velocity / 127.0; //MIDI velocity is a signed int for some reason
       for (unsigned int j = 3 * i; j < 3 * i + 3; ++j)
       {
-        oscillators[j]->frequency(notes[note]);
+        oscillators[j]->begin(waveform);
+        oscillators[j]->frequency(notes[note - note_diff]);
+        oscillators[j]->amplitude(v);
       }
+      envelopes[i]->attack(attack);
+      envelopes[i]->release(release);
       envelopes[i]->noteOn();
+      notes_played[i] = note - note_diff;
       available[i] = false;
-      playing[note] = i;
+      playing[note - note_diff] = i;
       break;
     }
     ++i;
@@ -296,8 +323,9 @@ void play_note(const unsigned int note)
 }
 
 //Stop playing a note. Corresponds to play_note() above
-void stop_note(const unsigned int note)
+void stop_note(byte channel, byte note, byte velocity)
 {
-  unsigned int envelope = playing[note];
+  //Serial.println(notes[note - note_diff]); //For testing
+  unsigned int envelope = playing[note - note_diff];
   envelopes[envelope]->noteOff();
 }
