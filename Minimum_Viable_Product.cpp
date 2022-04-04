@@ -93,6 +93,7 @@ AudioConnection          patchCord35(amp1, 0, dac, 1);
 double attack, decay, sustain, release;
 int type, velocity, channel, d1, d2;
 int waveform;
+unsigned int volume_control = 7;  //The control indicator for volume input on the keyboard
 const double const1 = log10(4) - log10(3);            //Used for envelope equations. See README.md section 3.2
 const double const2 = log10(2) / const1;              //continued
 const double const3 = (log10(3) - log10(2)) / const1; //continued
@@ -174,7 +175,7 @@ bool available [6]
   true, true, true, true, true, true
 };
 //For which note each envelope is playing
-int notes_played[6];
+unsigned int notes_played[6];
 
 //Setup for the USB host
 USBHost usb;
@@ -187,9 +188,10 @@ MIDIDevice midi1(usb);
 void play_note(const unsigned int note);
 void stop_note(const unsigned int note);
 
-//MIDI Setup
+//MIDI Input Setup
 void myNoteOn(byte channel, byte note, byte velocity);
 void myNoteOff(byte channel, byte note, byte velocity);
+void volume_control(byte channel, byte control, byte value);
 
 void setup()
 {
@@ -208,6 +210,8 @@ void setup()
   //MIDI setup
   midi1.setHandleNoteOn(play_note);
   midi1.setHandleNoteOff(stop_note);
+  midi1.setHandleControlChange(volume_control);
+
 
   //Prevent clipping with mixers
   for (unsigned int i = 0; i < 8; ++i)
@@ -270,8 +274,8 @@ void play_note(byte channel, byte note, byte velocity)
   //Serial.println(velocity, DEC); //For testing
   //Update attack and release. See README.md section 3.2
   attack = analogRead(potentiometers[0]);
-  Serial.println("Read attack raw value: ");
-  Serial.println(attack);
+//  Serial.println("Read attack raw value: ");
+//  Serial.println(attack);
   if (attack > (1023.0 / 2.0))
   {
     attack = (const2 - (log10(1 + attack / analog_range) / const1)) * 100.0;
@@ -280,8 +284,8 @@ void play_note(byte channel, byte note, byte velocity)
     attack = (1 - (log10(1 + attack / analog_range) / const1) * const4) * envelope_max;
   }
   release = analogRead(potentiometers[1]);
-  Serial.println("Read release raw value: ");
-  Serial.println(release);
+//  Serial.println("Read release raw value: ");
+//  Serial.println(release);
   if (release > (1023.0 / 2.0))
   {
     release = (const2 - (log10(1 + release / analog_range) / const1)) * 100.0;
@@ -289,10 +293,11 @@ void play_note(byte channel, byte note, byte velocity)
   {
     release = (1 - (log10(1 + release / analog_range) / const1) * const4) * envelope_max;
   }
-  Serial.println("Calculated Attack (ms): ");
-  Serial.println(attack);
-  Serial.println("Calculated Release (ms): ");
-  Serial.println(release);
+//  Serial.println("Calculated Attack (ms): ");
+//  Serial.println(attack);
+//  Serial.println("Calculated Release (ms): ");
+//  Serial.println(release);
+
   unsigned int i = 0;
   while (i < 6)
   {
@@ -313,6 +318,7 @@ void play_note(byte channel, byte note, byte velocity)
       envelopes[i]->attack(attack);
       envelopes[i]->release(release);
       envelopes[i]->noteOn();
+      //Update Polyphony
       notes_played[i] = note - note_diff;
       available[i] = false;
       playing[note - note_diff] = i;
@@ -328,4 +334,16 @@ void stop_note(byte channel, byte note, byte velocity)
   //Serial.println(notes[note - note_diff]); //For testing
   unsigned int envelope = playing[note - note_diff];
   envelopes[envelope]->noteOff();
+}
+
+//Set volume from keyboard
+void volume_control(byte channel, byte control, byte value)
+{
+  Serial.print("Control Change, ch=");
+  Serial.print(channel, DEC);
+  Serial.print(", control=");
+  Serial.print(control, DEC);
+  Serial.print(", value=");
+  Serial.println(value, DEC);
+  if (control == volume_control) amp1.gain(value / 127.0);
 }
