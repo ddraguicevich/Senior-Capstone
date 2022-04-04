@@ -5,18 +5,17 @@
     of 6-note polyphony, MIDI input, envelope control, and waveform control
 */
 
-#include <Audio.h>
-#include <Wire.h>
+#include <Audio.h>        //PJRC's audio library
+#include <Wire.h>         //Basic GPIO
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
-#include <ADC.h>
-#include <MIDI.h>
-#include <algorithm>
-#include <vector>
-#include <Bounce.h>
-#include <USBHost_t36.h>
+#include <ADC.h>          //For reading in potentiometers
+#include <MIDI.h>         //MIDI library for MIDI input 
+#include <Bounce.h>       //Debouncing buttons
+#include <USBHost_t36.h>  //Necessary to connect things to the USB host
 
+// From https://www.pjrc.com/teensy/gui/
 // GUItool: begin automatically generated code
 AudioSynthWaveform       oscillator1;
 AudioSynthWaveform       oscillator2;
@@ -85,7 +84,7 @@ AudioConnection          patchCord29(envelope5, 0, mix8, 1);
 AudioConnection          patchCord30(envelope6, 0, mix8, 2);
 AudioConnection          patchCord31(mix7, 0, mix9, 0);
 AudioConnection          patchCord32(mix8, 0, mix9, 1);
-AudioConnection          patchcord33(mix9, 0, amp1, 0);
+AudioConnection          patchCord33(mix9, 0, amp1, 0);
 AudioConnection          patchCord34(amp1, 0, dac, 0);
 AudioConnection          patchCord35(amp1, 0, dac, 1);
 // GUItool: end automatically generated code
@@ -93,7 +92,7 @@ AudioConnection          patchCord35(amp1, 0, dac, 1);
 double attack, decay, sustain, release;
 int type, velocity, channel, d1, d2;
 int waveform;
-unsigned int volume_control = 7;  //The control indicator for volume input on the keyboard
+unsigned int volume_val = 7;  //The control indicator for volume input on the keyboard
 const double const1 = log10(4) - log10(3);            //Used for envelope equations. See README.md section 3.2
 const double const2 = log10(2) / const1;              //continued
 const double const3 = (log10(3) - log10(2)) / const1; //continued
@@ -104,7 +103,7 @@ const double envelope_max = 11800.0; //Max duration of envelope attack, decay, a
 //Identify Potentiometer Pins for later
 unsigned int potentiometers[]
 {
-  39, 40
+  41, 38, 39, 40
 };
 
 //Used for buttons - not in final MIDI code
@@ -125,8 +124,6 @@ Bounce buttons[4]
 
 //Setup for actual note frequencies since MIDI only gives 0-255 int
 //but we need frequency as a double
-//Note - 24 gives C2 as lowest note since keyboard minimum is 36
-unsigned int note_diff = 12;
 double notes[]
 {
   16.35, 17.23, 18.35, 19.45, 20.60, 21.83, 23.21, 24.50, 25.96, 27.50, 29.14, 30.87,
@@ -204,7 +201,7 @@ void setup()
   
   AudioMemory(18); //Need to designate audio memory or nothing works
   Serial.begin(9600); //For testing
-  Serial.println("Began monitoring USB host port");
+  //Serial.println("Began monitoring USB host port");
   amp1.gain(1.0);
 
   //MIDI setup
@@ -212,21 +209,23 @@ void setup()
   midi1.setHandleNoteOff(stop_note);
   midi1.setHandleControlChange(volume_control);
 
-
   //Prevent clipping with mixers
   for (unsigned int i = 0; i < 8; ++i)
   {
-    mixers[i]->gain(0, 0.33);
-    mixers[i]->gain(1, 0.33);
-    mixers[i]->gain(2, 0.33);
+    mixers[i]->gain(0, 0.16);
+    mixers[i]->gain(1, 0.16);
+    mixers[i]->gain(2, 0.16);
+    mixers[i]->gain(3, 0);
   }
-  mix9.gain(0, 0.5);
-  mix9.gain(1, 0.5);
+  mix9.gain(0, 0.25);
+  mix9.gain(1, 0.25);
+  mix9.gain(2, 0);
+  mix9.gain(3, 0);
 
   //Initialize oscillators
   for (unsigned int i = 0; i < 18; ++i)
   {
-    oscillators[i]->begin(1.0, 440.0, WAVEFORM_TRIANGLE);
+    oscillators[i]->begin(WAVEFORM_SINE);
   }
 
   //Initialize buttons for testing
@@ -270,10 +269,21 @@ void loop()
 //Implement polyphony via parallel arrays
 void play_note(byte channel, byte note, byte velocity)
 {
-  //Serial.println(notes[note - note_diff]); //For testing
+  //Serial.println(notes[note]); //For testing
   //Serial.println(velocity, DEC); //For testing
-  //Update attack and release. See README.md section 3.2
-  attack = analogRead(potentiometers[0]);
+  //Update envelope control. See README.md section 3.2
+  decay = analogRead(potentiometers[0]);
+  //Serial.println(decay);
+  if (decay > (1023.0 / 2.0))
+  {
+    decay = (const2 - (log10(1 + decay / analog_range) / const1)) * 100.0;
+  } else
+  {
+    decay = (1 - (log10(1 + decay / analog_range) / const1) * const4) * envelope_max;
+  }
+  sustain = analogRead(potentiometers[1]) / analog_range;
+  //Serial.println(sustain);
+  attack = analogRead(potentiometers[2]);
 //  Serial.println("Read attack raw value: ");
 //  Serial.println(attack);
   if (attack > (1023.0 / 2.0))
@@ -283,7 +293,7 @@ void play_note(byte channel, byte note, byte velocity)
   {
     attack = (1 - (log10(1 + attack / analog_range) / const1) * const4) * envelope_max;
   }
-  release = analogRead(potentiometers[1]);
+  release = analogRead(potentiometers[3]);
 //  Serial.println("Read release raw value: ");
 //  Serial.println(release);
   if (release > (1023.0 / 2.0))
@@ -306,22 +316,25 @@ void play_note(byte channel, byte note, byte velocity)
       available[i] = true;
       notes_played[i] = 0;
     }
-    if (available[i] || notes_played[i] == (note - note_diff))
+    if (available[i] || notes_played[i] == note)
     {
       double v = velocity / 127.0; //MIDI velocity is a signed int for some reason
+      //Serial.println(v);
       for (unsigned int j = 3 * i; j < 3 * i + 3; ++j)
       {
         oscillators[j]->begin(waveform);
-        oscillators[j]->frequency(notes[note - note_diff]);
+        oscillators[j]->frequency(notes[note]);
         oscillators[j]->amplitude(v);
       }
       envelopes[i]->attack(attack);
+      envelopes[i]->decay(decay);
+      envelopes[i]->sustain(sustain);
       envelopes[i]->release(release);
       envelopes[i]->noteOn();
       //Update Polyphony
-      notes_played[i] = note - note_diff;
+      notes_played[i] = note;
       available[i] = false;
-      playing[note - note_diff] = i;
+      playing[note] = i;
       break;
     }
     ++i;
@@ -331,19 +344,19 @@ void play_note(byte channel, byte note, byte velocity)
 //Stop playing a note. Corresponds to play_note() above
 void stop_note(byte channel, byte note, byte velocity)
 {
-  //Serial.println(notes[note - note_diff]); //For testing
-  unsigned int envelope = playing[note - note_diff];
+  //Serial.println(notes[note]); //For testing
+  unsigned int envelope = playing[note];
   envelopes[envelope]->noteOff();
 }
 
 //Set volume from keyboard
 void volume_control(byte channel, byte control, byte value)
 {
-  Serial.print("Control Change, ch=");
-  Serial.print(channel, DEC);
-  Serial.print(", control=");
-  Serial.print(control, DEC);
-  Serial.print(", value=");
-  Serial.println(value, DEC);
-  if (control == volume_control) amp1.gain(value / 127.0);
+//  Serial.print("Control Change, ch=");
+//  Serial.print(channel, DEC);
+//  Serial.print(", control=");
+//  Serial.print(control, DEC);
+//  Serial.print(", value=");
+//  Serial.println(value, DEC);
+  if (control == volume_val) amp1.gain(value / 127.0);
 }
