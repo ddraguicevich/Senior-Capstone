@@ -210,11 +210,13 @@ void setup()
   midi1.setHandleControlChange(volume_control);
 
   //Prevent clipping with mixers
+  //Each mixer cannot be above 0.5 total or there is clipping.
+  //Not sure why
   for (unsigned int i = 0; i < 8; ++i)
   {
-    mixers[i]->gain(0, 0.16);
-    mixers[i]->gain(1, 0.16);
-    mixers[i]->gain(2, 0.16);
+    mixers[i]->gain(0, 0.166);
+    mixers[i]->gain(1, 0.166);
+    mixers[i]->gain(2, 0.166);
     mixers[i]->gain(3, 0);
   }
   mix9.gain(0, 0.25);
