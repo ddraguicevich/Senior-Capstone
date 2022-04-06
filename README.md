@@ -20,14 +20,27 @@ Table of Contents
 1.0 Overview
 ----------------------
 
+1.1 Basic Functionality
+
+1.2 Breakdown of Code Sections
+
+1.3 Additional Notes
+
 --------------------------
 2.0 Setup on a Teensy 4.1
 --------------------------
 
+2.1 Requires Software
+
+2.2 Instructions
 
 ----------------------------
 3.0 Explanation of Constants
 -----------------------------
+ 
+3.1 Hardware Constants
+
+The Teensy 4.1 has an ADC which has 7 bits of effective input, giving a range of values 0-1023. As such, the max value for any given potentiometer is 1023, which shows up in several calculations for the slider potentiometers.
  
 3.2 Software Constants
  
@@ -67,3 +80,5 @@ const1 = log(4) - log(3) = b
 const2 = log(2)/const1 = a
 const3 = (log(3)-log(2))/const1
 const4 = (11.7/11.8)*const3 = d
+
+For the values used by the mixers, the inputs on a mixer cannot total more than 0.5. I don't know why this is the case, it should be 1.0 since it's attenuating but it's being doubled somewhere so two inputs would be 0.25 each, three would be 0.166 each, and four would be 0.125 each. I set the dummy inputs to 0 to be safe even though they aren't connected to anything.
