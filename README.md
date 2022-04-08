@@ -72,13 +72,14 @@ c - (log(1.5)/b)*d = 1/118
 So we are left with
 
 c = 1
-d = (11.7/11.8)*log(3/2)/log(4/3) = (11.7/11.8)*(log(3)-log(2))/(log(4)-log(3))
 
 To simplify all this in the final code, the following constants are used:
 
 const1 = log(4) - log(3) = b
 const2 = log(2)/const1 = a
 const3 = (log(3)-log(2))/const1
-const4 = (11.7/11.8)*const3 = d
+const4 = 1/(11.8*const3) = d
+
+And we multiply const4 by (11.8 - x) to get x seconds as a divider.
 
 For the values used by the mixers, the inputs on a mixer cannot total more than 0.5. I don't know why this is the case, it should be 1.0 since it's attenuating but it's being doubled somewhere so two inputs would be 0.25 each, three would be 0.166 each, and four would be 0.125 each. I set the dummy inputs to 0 to be safe even though they aren't connected to anything.
