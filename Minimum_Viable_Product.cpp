@@ -51,6 +51,12 @@ AudioMixer4              mix7;
 AudioMixer4              mix8;
 AudioMixer4              mix9;
 AudioAmplifier           amp1;
+AudioAmplifier           amp2;
+AudioAmplifier           amp3;
+AudioAmplifier           amp4;
+AudioAmplifier           amp5;
+AudioAmplifier           amp6;
+AudioAmplifier           amp7;
 AudioOutputPT8211        dac;
 AudioConnection          patchCord1(oscillator1, 0, mix1, 0);
 AudioConnection          patchCord2(oscillator2, 0, mix1, 1);
@@ -70,57 +76,69 @@ AudioConnection          patchCord15(oscillator15, 0, mix5, 2);
 AudioConnection          patchCord16(oscillator16, 0, mix6, 0);
 AudioConnection          patchCord17(oscillator17, 0, mix6, 1);
 AudioConnection          patchCord18(oscillator18, 0, mix6, 2);
-AudioConnection          patchCord19(mix1, 0, envelope1, 0);
-AudioConnection          patchCord20(mix2, 0, envelope2, 0);
-AudioConnection          patchCord21(mix3, 0, envelope3, 0);
-AudioConnection          patchCord22(mix4, 0, envelope4, 0);
-AudioConnection          patchCord23(mix5, 0, envelope5, 0);
-AudioConnection          patchCord24(mix6, 0, envelope6, 0);
-AudioConnection          patchCord25(envelope1, 0, mix7, 0);
-AudioConnection          patchCord26(envelope2, 0, mix7, 1);
-AudioConnection          patchCord27(envelope3, 0, mix7, 2);
-AudioConnection          patchCord28(envelope4, 0, mix8, 0);
-AudioConnection          patchCord29(envelope5, 0, mix8, 1);
-AudioConnection          patchCord30(envelope6, 0, mix8, 2);
-AudioConnection          patchCord31(mix7, 0, mix9, 0);
-AudioConnection          patchCord32(mix8, 0, mix9, 1);
-AudioConnection          patchCord33(mix9, 0, amp1, 0);
-AudioConnection          patchCord34(amp1, 0, dac, 0);
-AudioConnection          patchCord35(amp1, 0, dac, 1);
+AudioConnection          patchCord19(mix1, 0, amp1, 0);
+AudioConnection          patchCord20(mix2, 0, amp2, 0);
+AudioConnection          patchCord21(mix3, 0, amp3, 0);
+AudioConnection          patchCord22(mix4, 0, amp4, 0);
+AudioConnection          patchCord23(mix5, 0, amp5, 0);
+AudioConnection          patchCord24(mix6, 0, amp6, 0);
+AudioConnection          patchCord25(amp1, 0, envelope1, 0);
+AudioConnection          patchCord26(amp2, 0, envelope2, 0);
+AudioConnection          patchCord27(amp3, 0, envelope3, 0);
+AudioConnection          patchCord28(amp4, 0, envelope4, 0);
+AudioConnection          patchCord29(amp5, 0, envelope5, 0);
+AudioConnection          patchCord30(amp6, 0, envelope6, 0);
+AudioConnection          patchCord31(envelope1, 0, mix7, 0);
+AudioConnection          patchCord32(envelope2, 0, mix7, 1);
+AudioConnection          patchCord33(envelope3, 0, mix7, 2);
+AudioConnection          patchCord34(envelope4, 0, mix8, 0);
+AudioConnection          patchCord35(envelope5, 0, mix8, 1);
+AudioConnection          patchCord36(envelope6, 0, mix8, 2);
+AudioConnection          patchCord37(mix7, 0, mix9, 0);
+AudioConnection          patchCord38(mix8, 0, mix9, 1);
+AudioConnection          patchCord39(mix9, 0, amp7, 0);
+AudioConnection          patchCord40(amp7, 0, dac, 0);
+AudioConnection          patchCord41(amp7, 0, dac, 1);
 // GUItool: end automatically generated code
 
 double attack, decay, sustain, release;
-int type, velocity, channel, d1, d2;
-int waveform;
+int type, velocity, channel, d1, d2, waveform;
 unsigned int volume_val = 7;  //The control indicator for volume input on the keyboard
 const double const1 = log10(4) - log10(3);            //Used for envelope equations. See README.md section 3.2
 const double const2 = log10(2) / const1;              //continued
 const double const3 = (log10(3) - log10(2)) / const1; //continued
-const double const4 = 11.7 / (11.8 * const3);         //continued
+const double const4 = 1 / (11.8 * const3);         //continued
 const double analog_range = 1023.0; //Max value for analog inputs
 const double envelope_max = 11800.0; //Max duration of envelope attack, decay, and release
 
-//Identify Potentiometer Pins for later
-unsigned int potentiometers[]
+//Oscillator volume pins
+unsigned int oscillator_volume_pins[]
 {
-  41, 38, 39, 40
+  25, 26, 27
 };
 
-//Used for buttons - not in final MIDI code
-unsigned int note_pins[]
+//Oscillator selection pins
+unsigned int oscillator_selection_pins[]
 {
-  27, 28, 29, 30
+  9, 10, 11, 12, 
+  28, 29, 30, 31,
+  33, 34, 35, 36
+};
+
+//Waveforms relative to multi position switches
+int waveforms[]
+{
+  WAVEFORM_SINE, WAVEFORM_SQUARE, WAVEFORM_TRIANGLE, WAVEFORM_SAWTOOTH
+};
+
+//Envelope control pins
+unsigned int envelope_control_pins[]
+{
+  38, 39, 40, 41
 };
 
 //Debouncing buttons
-Bounce b1(27, 10);
-Bounce b2(28, 10);
-Bounce b3(29, 10);
-Bounce b4(30, 10);
-Bounce buttons[4]
-{
-  b1, b2, b3, b4
-};
+//Bounce b1(20, 10);
 
 //Setup for actual note frequencies since MIDI only gives 0-255 int
 //but we need frequency as a double
@@ -139,16 +157,22 @@ double notes[]
 };
 
 //Makes setting up mixers easier
-AudioMixer4 * mixers[8]
+AudioMixer4 * mixers[]
 {
   &mix1, &mix2, &mix3, &mix4, &mix5, &mix6, &mix7, &mix8
 };
 
 //Setting up for polyphony by creating an array of pointers
 //to all the envelopes which we can then cycle through
-AudioEffectEnvelope * envelopes[6]
+AudioEffectEnvelope * envelopes[]
 {
   &envelope1, &envelope2, &envelope3, &envelope4, &envelope5, &envelope6
+};
+
+//For controlling the volume of each note played
+AudioAmplifier * amps[]
+{
+  &amp1, &amp2, &amp3, &amp4, &amp5, &amp6
 };
 
 //Determine which envelope plays which note
@@ -156,7 +180,7 @@ int playing[255];
 
 //Makes sorting out note frequency easier,
 //as well as polyphony
-AudioSynthWaveform * oscillators[18]
+AudioSynthWaveform * oscillators[]
 {
   &oscillator1, &oscillator2, &oscillator3,
   &oscillator4, &oscillator5, &oscillator6,
@@ -167,10 +191,11 @@ AudioSynthWaveform * oscillators[18]
 };
 
 //For determining which envelope is available for polyphony
-bool available [6]
+bool available []
 {
   true, true, true, true, true, true
 };
+
 //For which note each envelope is playing
 unsigned int notes_played[6];
 
@@ -190,6 +215,10 @@ void myNoteOn(byte channel, byte note, byte velocity);
 void myNoteOff(byte channel, byte note, byte velocity);
 void volume_control(byte channel, byte control, byte value);
 
+//Various update functions
+void update_envelope(void);
+void update_oscillators(void);
+
 void setup()
 {
     
@@ -200,18 +229,23 @@ void setup()
   usb.begin();
   
   AudioMemory(18); //Need to designate audio memory or nothing works
-  Serial.begin(9600); //For testing
+  //Serial.begin(9600); //For testing
   //Serial.println("Began monitoring USB host port");
-  amp1.gain(1.0);
 
   //MIDI setup
   midi1.setHandleNoteOn(play_note);
   midi1.setHandleNoteOff(stop_note);
   midi1.setHandleControlChange(volume_control);
 
+  //Set up multi position switches
+  for (unsigned int i = 0; i < 12; ++i)
+  {
+    pinMode(oscillator_selection_pins[i], INPUT_PULLUP);
+  }
+
   //Prevent clipping with mixers
   //Each mixer cannot be above 0.5 total or there is clipping.
-  //Not sure why
+  //Not sure why as 1.0 seems more logical
   for (unsigned int i = 0; i < 8; ++i)
   {
     mixers[i]->gain(0, 0.166);
@@ -229,110 +263,48 @@ void setup()
   {
     oscillators[i]->begin(WAVEFORM_SINE);
   }
-
-  //Initialize buttons for testing
-  for (unsigned int i = 0; i < sizeof(note_pins) / sizeof(int); ++i)
-  {
-    pinMode(note_pins[i], INPUT);
-  }
 }
 
 void loop()
 {
+  //Check USB and midi for updates
   usb.Task();
   midi1.read();
-
-  for (unsigned int i = 0; i < sizeof(note_pins) / sizeof(int); ++i)
-  {
-    if (buttons[i].update())
-    {
-      if (buttons[i].risingEdge())
-      { 
-        switch (note_pins[i])
-        {
-          case 27:
-            waveform = WAVEFORM_SINE;
-            break;
-          case 28:
-            waveform = WAVEFORM_SQUARE;
-            break;
-          case 29:
-            waveform = WAVEFORM_TRIANGLE;
-            break;
-          case 30:
-            waveform = WAVEFORM_SAWTOOTH;
-            break;
-        }
-      }
-    }
-  }
 }
 
 //Implement polyphony via parallel arrays
 void play_note(byte channel, byte note, byte velocity)
 {
-  //Serial.println(notes[note]); //For testing
-  //Serial.println(velocity, DEC); //For testing
-  //Update envelope control. See README.md section 3.2
-  decay = analogRead(potentiometers[0]);
-  //Serial.println(decay);
-  if (decay > (1023.0 / 2.0))
-  {
-    decay = (const2 - (log10(1 + decay / analog_range) / const1)) * 100.0;
-  } else
-  {
-    decay = (1 - (log10(1 + decay / analog_range) / const1) * const4) * envelope_max;
-  }
-  sustain = analogRead(potentiometers[1]) / analog_range;
-  //Serial.println(sustain);
-  attack = analogRead(potentiometers[2]);
-//  Serial.println("Read attack raw value: ");
-//  Serial.println(attack);
-  if (attack > (1023.0 / 2.0))
-  {
-    attack = (const2 - (log10(1 + attack / analog_range) / const1)) * 100.0;
-  } else
-  {
-    attack = (1 - (log10(1 + attack / analog_range) / const1) * const4) * envelope_max;
-  }
-  release = analogRead(potentiometers[3]);
-//  Serial.println("Read release raw value: ");
-//  Serial.println(release);
-  if (release > (1023.0 / 2.0))
-  {
-    release = (const2 - (log10(1 + release / analog_range) / const1)) * 100.0;
-  } else
-  {
-    release = (1 - (log10(1 + release / analog_range) / const1) * const4) * envelope_max;
-  }
-//  Serial.println("Calculated Attack (ms): ");
-//  Serial.println(attack);
-//  Serial.println("Calculated Release (ms): ");
-//  Serial.println(release);
-
+  update_oscillators(); //Update oscillator values
+  update_envelope();  //Update envelope values
   unsigned int i = 0;
   while (i < 6)
   {
+    //Update active vs inactive envelopes
     if (!envelopes[i]->isActive())
     {
       available[i] = true;
+      amps[i]->gain(0.0);
       notes_played[i] = 0;
     }
+
+    //If no envelope is available then don't play the note
     if (available[i] || notes_played[i] == note)
     {
       double v = velocity / 127.0; //MIDI velocity is a signed int for some reason
-      //Serial.println(v);
+      amps[i]->gain(v);
       for (unsigned int j = 3 * i; j < 3 * i + 3; ++j)
       {
-        oscillators[j]->begin(waveform);
         oscillators[j]->frequency(notes[note]);
-        oscillators[j]->amplitude(v);
       }
+
+      //Assign updated envelope values
       envelopes[i]->attack(attack);
       envelopes[i]->decay(decay);
       envelopes[i]->sustain(sustain);
       envelopes[i]->release(release);
-      envelopes[i]->noteOn();
+      envelopes[i]->noteOn(); //Play the note
+      
       //Update Polyphony
       notes_played[i] = note;
       available[i] = false;
@@ -354,11 +326,67 @@ void stop_note(byte channel, byte note, byte velocity)
 //Set volume from keyboard
 void volume_control(byte channel, byte control, byte value)
 {
-//  Serial.print("Control Change, ch=");
-//  Serial.print(channel, DEC);
-//  Serial.print(", control=");
-//  Serial.print(control, DEC);
-//  Serial.print(", value=");
-//  Serial.println(value, DEC);
-  if (control == volume_val) amp1.gain(value / 127.0);
+  if (control == volume_val) amp7.gain(value / 127.0);
+}
+
+//Read and update envelope values
+//See README.md section 3.2 for explanation
+void update_envelope(void)
+{
+  //Read raw values
+  attack = analogRead(envelope_control_pins[0]);
+  decay = analogRead(envelope_control_pins[1]);
+  sustain = analogRead(envelope_control_pins[2]) / analog_range; //Sustain is a percent volume so we can make it linear
+  release = analogRead(envelope_control_pins[3]);
+
+  Serial.println(decay);
+  
+  //Calculate attack value
+  if (attack > (1023.0 / 2.0))
+  {
+    attack = (const2 - (log10(1 + attack / analog_range) / const1)) * 100.0;
+  } else
+  {
+    attack = (1 - (log10(1 + attack / analog_range) / const1) * (11.7 * const4)) * envelope_max;
+  }
+
+  //Calculate decay value
+  if (decay > (1023.0 / 2.0))
+  {
+    decay = (const2 - (log10(1 + decay / analog_range) / const1)) * 100.0;
+  } else
+  {
+    decay = (1 - (log10(1 + decay / analog_range) / const1) * (11.7 * const4)) * envelope_max;
+  }
+  
+  //Calculate release value
+  if (release > (1023.0 / 2.0))
+  {
+    release = (const2 - (log10(1 + release / analog_range) / const1)) * 2000.0;
+  } else
+  {
+    release = (1 - (log10(1 + release / analog_range) / const1) * (11.8 * 2 * const4)) * envelope_max;
+  }
+}
+
+//Update oscillator volume and waveform
+void update_oscillators(void)
+{
+  double volume = 0.0;
+  for (unsigned int i = 0; i < 3; ++i)
+  {
+    for (unsigned int j = 4 * i; j < (4 * i) + 4; ++j)
+    {
+      if (!digitalRead(oscillator_selection_pins[j]))
+      {
+        waveform = waveforms[j % 4];
+      }
+    }
+    volume = 1.0 - (analogRead(oscillator_volume_pins[i]) / analog_range);
+    for (unsigned int j = 0; j < 6; ++j)
+    {
+      oscillators[(3 * j) + i]->begin(waveform);
+      oscillators[(3 * j) + i]->amplitude(volume);
+    }
+  }
 }
