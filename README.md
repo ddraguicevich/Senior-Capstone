@@ -5,15 +5,21 @@
 Table of Contents
 -----------------
  Sections:
+ 
  1.0 Overview
+ 
   1.1 Basic Functionality
-  1.2 Breakdown of Code Sections
-  1.3 Additional Notes
+  
  2.0 Setup on a Teensy 4.1
+ 
   2.1 Required Software
+  
   2.2 Instructions
+  
  3.0 Explanation of Constants
+ 
   3.1 Hardware Constants
+  
   3.2 Software Constants
 
 ----------------------
@@ -22,17 +28,35 @@ Table of Contents
 
 1.1 Basic Functionality
 
-1.2 Breakdown of Code Sections
+The code is broken down into the following targets:
 
-1.3 Additional Notes
+Basic Testing: Play a sound with user-controlled frequency (via potentiometer in this case)
+
+Single Note MIDI: Get input from a MIDI keyboard and play a single note with some user-defined envelope
+
+Minimum Viable Product: MIDI input with 6-note polyphony and user-defined volume, 3x waveforms, and 6 note polyphony
 
 --------------------------
 2.0 Setup on a Teensy 4.1
 --------------------------
 
-2.1 Requires Software
+2.1 Required Software
+
+The Teensy 4.1 use a custom uploader running on top of Arduino's IDE.
+The Arduino IDE can currently be found at https://www.arduino.cc/en/software
+Teensy's Bootloader can currently be found at https://www.pjrc.com/teensy/loader.html
 
 2.2 Instructions
+
+- Install the Arduino IDE found above
+- Install Teensy's Bootlarder found above
+- Connect the Teensy to your computer with a micro USB cable
+- In the top-left, select Tools->Boards->Teensy 4.1 to select the correct bootloader
+- Select a test program (such as LED blink) and press "Upload" (Arrow, top-right)
+- Once the program compiles, a small window should pop up showing the Teensy is being programmed
+- If the window does not show up, reinstall Teensy's Bootloader
+- If the window does show up but does not go through a process ending with "Reboot OK" then press the button once on the Teensy 4.1 to manually flash (next to the Micro SD slot)
+- It should work
 
 ----------------------------
 3.0 Explanation of Constants
@@ -80,6 +104,6 @@ const2 = log(2)/const1 = a
 const3 = (log(3)-log(2))/const1
 const4 = 1/(11.8*const3) = d
 
-And we multiply const4 by (11.8 - x) to get x seconds as a divider.
+And we multiply const4 and the output of equation one by (11.8 - x) to get x seconds as a divider between the two halves of the envelope controller.
 
 For the values used by the mixers, the inputs on a mixer cannot total more than 0.5. I don't know why this is the case, it should be 1.0 since it's attenuating but it's being doubled somewhere so two inputs would be 0.25 each, three would be 0.166 each, and four would be 0.125 each. I set the dummy inputs to 0 to be safe even though they aren't connected to anything.
