@@ -365,7 +365,7 @@ void update_envelope(void)
     release = (const2 - (log10(1 + release / analog_range) / const1)) * 2000.0;
   } else
   {
-    release = (1 - (log10(1 + release / analog_range) / const1) * (11.8 * 2 * const4)) * envelope_max;
+    release = (1 - (log10(1 + release / analog_range) / const1) * (9.8 * const4)) * envelope_max;
   }
 }
 
