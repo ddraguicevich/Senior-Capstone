@@ -197,7 +197,10 @@ bool available []
 };
 
 //For which note each envelope is playing
-unsigned int notes_played[6];
+int notes_played[]
+{
+  -1, -1, -1, -1, -1, -1
+};
 
 //Setup for the USB host
 USBHost usb;
@@ -228,7 +231,7 @@ void setup()
   //delay(1500);
   usb.begin();
   
-  AudioMemory(18); //Need to designate audio memory or nothing works
+  AudioMemory(64); //Need to designate audio memory or nothing works
   //Serial.begin(9600); //For testing
   //Serial.println("Began monitoring USB host port");
 
@@ -285,24 +288,20 @@ void play_note(byte channel, byte note, byte velocity)
     {
       available[i] = true;
       amps[i]->gain(0.0);
-      notes_played[i] = 0;
+      notes_played[i] = -1;
     }
 
     //If no envelope is available then don't play the note
     if (available[i] || notes_played[i] == note)
     {
+      //Serial.println(String("Playing ") + note + String(" on envelope ") + i);  //For Testing
       double v = velocity / 127.0; //MIDI velocity is a signed int for some reason
       amps[i]->gain(v);
       for (unsigned int j = 3 * i; j < 3 * i + 3; ++j)
       {
         oscillators[j]->frequency(notes[note]);
       }
-
-      //Assign updated envelope values
-      envelopes[i]->attack(attack);
-      envelopes[i]->decay(decay);
-      envelopes[i]->sustain(sustain);
-      envelopes[i]->release(release);
+      
       envelopes[i]->noteOn(); //Play the note
       
       //Update Polyphony
@@ -339,7 +338,7 @@ void update_envelope(void)
   sustain = analogRead(envelope_control_pins[2]) / analog_range; //Sustain is a percent volume so we can make it linear
   release = analogRead(envelope_control_pins[3]);
 
-  Serial.println(decay);
+  //Serial.println(decay);
   
   //Calculate attack value
   if (attack > (1023.0 / 2.0))
@@ -366,6 +365,15 @@ void update_envelope(void)
   } else
   {
     release = (1 - (log10(1 + release / analog_range) / const1) * (9.8 * const4)) * envelope_max;
+  }
+
+  for (unsigned int i = 0; i < 6; ++i)
+  {
+    //Assign updated envelope values
+    envelopes[i]->attack(attack);
+    envelopes[i]->decay(decay);
+    envelopes[i]->sustain(sustain);
+    envelopes[i]->release(release);
   }
 }
 
