@@ -78,7 +78,7 @@ Let x be normalised resistance for the potentiometer with range [0, 1]
 
 For first 100ms: duration(ms) = [((log(2)/(log(4)-log(3)) - ((log(1+x)/(log(4)-log(3)))] * 100
 
-For remaining duration: duration(ms) = (1 - ((log(1+x)/(log(4)-log(3))*11.7/(11.8*((log(3)-log(2))/(log(4)-log(3))))) * 11800
+For remaining duration: duration(ms) = (1 - ((log(1+x)/(log(4)-log(3))\*11.7/(11.8*((log(3)-log(2))/(log(4)-log(3))))) * 11800
 
 As we can see, this is a truly ugly mess. The logic behind it is actually simple enough, however. For the first 100ms we need
 
