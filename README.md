@@ -104,8 +104,11 @@ c = 1
 To simplify all this in the final code, the following constants are used:
 
 const1 = log(4) - log(3) = b
+
 const2 = log(2)/const1 = a
+
 const3 = (log(3)-log(2))/const1
+
 const4 = 1/(11.8*const3) = d
 
 And we multiply const4 and the output of equation one by (11.8 - x) to get x seconds as a divider between the two halves of the envelope controller.
