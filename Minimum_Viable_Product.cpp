@@ -341,7 +341,7 @@ void update_envelope(void)
   //Serial.println(decay);
   
   //Calculate attack value
-  if (attack > (1023.0 / 2.0))
+  if (attack > (analog_range / 2.0))
   {
     attack = (const2 - (log10(1 + attack / analog_range) / const1)) * 100.0;
   } else
@@ -350,7 +350,7 @@ void update_envelope(void)
   }
 
   //Calculate decay value
-  if (decay > (1023.0 / 2.0))
+  if (decay > (analog_range / 2.0))
   {
     decay = (const2 - (log10(1 + decay / analog_range) / const1)) * 100.0;
   } else
@@ -359,7 +359,7 @@ void update_envelope(void)
   }
   
   //Calculate release value
-  if (release > (1023.0 / 2.0))
+  if (release > (analog_range / 2.0))
   {
     release = (const2 - (log10(1 + release / analog_range) / const1)) * 2000.0;
   } else
