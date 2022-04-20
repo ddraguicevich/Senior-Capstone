@@ -95,6 +95,7 @@ b = log(4/3) = log(4)-log(3)
 The same is true for the second equation:
 
 c - (log(1)/b)*d = 1
+
 c - (log(1.5)/b)*d = 1/118
 
 So we are left with
