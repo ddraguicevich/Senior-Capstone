@@ -75,17 +75,21 @@ duration(ms) = (1 - log(1+x)/log(2))*11800
 Where x is potentiometer value with range [0, 1]. However, this curves the whole 11.8 second range, so it isn't super usefule. To get the exponential curve to work properly with two (2) equations, some fancy maths were required. The main equations are the following nastiness:
 
 Let x be normalised resistance for the potentiometer with range [0, 1]
+
 For first 100ms: duration(ms) = [((log(2)/(log(4)-log(3)) - ((log(1+x)/(log(4)-log(3)))] * 100
+
 For remaining duration: duration(ms) = (1 - ((log(1+x)/(log(4)-log(3))*11.7/(11.8*((log(3)-log(2))/(log(4)-log(3))))) * 11800
 
 As we can see, this is a truly ugly mess. The logic behind it is actually simple enough, however. For the first 100ms we need
 
 a - log(2)/log(b) = 0
+
 a - log(1.5)/log(b) = 1
 
 From which we get the constants
 
 a = log(2)/(log(4/3)) = log(2)/(log(4)-log(3))
+
 b = log(4/3) = log(4)-log(3)
 
 The same is true for the second equation:
